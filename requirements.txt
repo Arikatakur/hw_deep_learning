@@ -1,0 +1,7 @@
+requests>=2.32.0
+Pillow>=10.3.0
+imagehash>=4.3.1
+tqdm>=4.66.0
+scikit-learn>=1.5.0
+roboflow>=1.1.45
+ultralytics>=8.4.0

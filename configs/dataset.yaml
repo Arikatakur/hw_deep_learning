@@ -1,0 +1,11 @@
+# Update this file after the final object classes are chosen.
+path: ../data
+train: train/images
+val: test/images
+
+names:
+  0: face_mask
+  1: oxygen_mask
+  2: ventilator
+  3: face_shield
+  4: thermometer
