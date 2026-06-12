@@ -1,1 +1,45 @@
+# Environment variables
 .env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+pip-wheel-metadata/
+dist/
+build/
+*.egg-info/
+
+# Dataset / downloaded images
+dataset/
+dataset_labeled/
+with_labels/
+downloads/
+images/
+raw_images/
+*.jpg
+*.jpeg
+*.png
+*.webp
+
+# YOLO / training outputs
+runs/
+*.pt
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
