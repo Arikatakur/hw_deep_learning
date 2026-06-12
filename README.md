@@ -254,6 +254,10 @@ The best fix is to label more tilted examples and retrain.
 ```text
 configs/
   covid_test_dataset.yaml
+docs/
+  first-three-phases.md
+  firstThreePhases.pdf
+  Project2.pdf
 dataset/
   train/images/          # 400 original train images
   test/images/           # 100 held-out test images
