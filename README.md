@@ -34,7 +34,7 @@ Phase 2 classifier:
   model type: YOLOv8 classification
   classes: yes, no, invalid
   purpose: classify a cropped rapid test image
-  weights: runs/classify/covid_result_classifier/weights/best.pt
+  weights: runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt
 ```
 
 The detector does not decide positive/negative/invalid. It only crops the useful image region. The classifier makes the final diagnostic prediction from the crop.
@@ -269,6 +269,13 @@ The label history is stored in:
 classification_dataset/labels_manifest.csv
 ```
 
+Final Phase 2 split after adding confirmed invalid examples:
+
+```text
+train: yes 102, no 120, invalid 51
+val:   yes 23,  no 31,  invalid 12
+```
+
 ### Interactive Crop And Label Tool
 
 The script below loads the detector, crops each image, opens a small labeling window, and saves the crop into the selected class folder:
@@ -329,7 +336,7 @@ Many of these extra images were blurry, too close, or difficult to read. Those i
 Train YOLOv8 classification:
 
 ```powershell
-yolo classify train model=yolov8n-cls.pt data=classification_dataset epochs=50 imgsz=224 project=runs/classify name=covid_result_classifier
+yolo classify train model=yolov8n-cls.pt data=classification_dataset epochs=50 imgsz=224 project=runs/classify name=covid_result_classifier_invalid_boost_v2
 ```
 
 Training settings from the final run:
@@ -346,59 +353,59 @@ classes: yes, no, invalid
 Final classifier weights:
 
 ```text
-runs/classify/covid_result_classifier/weights/best.pt
-runs/classify/covid_result_classifier/weights/last.pt
+runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt
+runs/classify/covid_result_classifier_invalid_boost_v2/weights/last.pt
 ```
 
 Training outputs:
 
 ```text
-runs/classify/covid_result_classifier/results.csv
-runs/classify/covid_result_classifier/results.png
-runs/classify/covid_result_classifier/confusion_matrix.png
-runs/classify/covid_result_classifier/confusion_matrix_normalized.png
+runs/classify/covid_result_classifier_invalid_boost_v2/results.csv
+runs/classify/covid_result_classifier_invalid_boost_v2/results.png
+runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix.png
+runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix_normalized.png
 ```
 
 Final epoch validation metrics:
 
 ```text
-accuracy_top1: 0.85185 = 85.185%
+accuracy_top1: 0.92424 = 92.424%
 accuracy_top5: 1.0     = 100.0%
-val/loss:      0.45814
+val/loss:      0.18589
 ```
 
 Best observed validation accuracy during training:
 
 ```text
-accuracy_top1: 0.90741 = 90.741% at epoch 29
+accuracy_top1: 0.92424 = 92.424% at epochs 22, 29, 30, 32, 34, 42, and 50
 ```
 
 Classifier training curves:
 
-![Classifier results](runs/classify/covid_result_classifier/results.png)
+![Classifier results](runs/classify/covid_result_classifier_invalid_boost_v2/results.png)
 
 Classifier confusion matrix:
 
-![Classifier confusion matrix](runs/classify/covid_result_classifier/confusion_matrix.png)
+![Classifier confusion matrix](runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix.png)
 
 Normalized classifier confusion matrix:
 
-![Classifier normalized confusion matrix](runs/classify/covid_result_classifier/confusion_matrix_normalized.png)
+![Classifier normalized confusion matrix](runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix_normalized.png)
 
 Validation labels and model predictions:
 
-![Classifier validation labels batch 0](runs/classify/covid_result_classifier/val_batch0_labels.jpg)
+![Classifier validation labels batch 0](runs/classify/covid_result_classifier_invalid_boost_v2/val_batch0_labels.jpg)
 
-![Classifier validation predictions batch 0](runs/classify/covid_result_classifier/val_batch0_pred.jpg)
+![Classifier validation predictions batch 0](runs/classify/covid_result_classifier_invalid_boost_v2/val_batch0_pred.jpg)
 
-Important limitation: the `invalid` class is underrepresented compared with `yes` and `no`. The model can still be trained, but invalid predictions are the highest-risk part of the classifier.
+The final invalid-boost run includes invalid examples in both training and validation. This makes the validation result more meaningful than the earlier run, which had no invalid validation images.
 
 ### Validate The Classifier
 
 Use validation mode for folder-structured classification data:
 
 ```powershell
-yolo classify val model=runs/classify/covid_result_classifier/weights/best.pt data=classification_dataset
+yolo classify val model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt data=classification_dataset
 ```
 
 This predicts every validation image and compares the prediction against the folder name. The folder name is the ground-truth label.
@@ -408,15 +415,15 @@ This predicts every validation image and compares the prediction against the fol
 `yolo classify predict` expects images directly inside the source folder. For this dataset, run it on each class folder separately:
 
 ```powershell
-yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=classification_dataset/val/yes save=True project=runs/classify name=result_predictions_yes
+yolo classify predict model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt source=classification_dataset/val/yes save=True project=runs/classify name=result_predictions_yes
 ```
 
 ```powershell
-yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=classification_dataset/val/no save=True project=runs/classify name=result_predictions_no
+yolo classify predict model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt source=classification_dataset/val/no save=True project=runs/classify name=result_predictions_no
 ```
 
 ```powershell
-yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=classification_dataset/val/invalid save=True project=runs/classify name=result_predictions_invalid
+yolo classify predict model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt source=classification_dataset/val/invalid save=True project=runs/classify name=result_predictions_invalid
 ```
 
 ## Full Diagnostic Pipeline
@@ -464,20 +471,20 @@ scripts/
   split_dataset.py
   label_cropped_tests.py
 
-dataset/                         generated, ignored by git
-dataset_labeled/                 generated, ignored by git
-with_labels/                     generated/exported labels, ignored by git
-classification_dataset/          generated, ignored by git
-cropped_tests/                   generated, ignored by git
-extra_unlabeled_covid_test_lines_v2/ generated, ignored by git
+dataset/                         
+dataset_labeled/                 
+with_labels/                     
+classification_dataset/          
+cropped_tests/                   
+extra_unlabeled_covid_test_lines_v2/ 
 
-runs/detect/                     detector training/prediction outputs, ignored by git
-runs/classify/                   classifier training/prediction outputs, ignored by git
+runs/detect/                     detector training/prediction outputs
+runs/classify/                   classifier training/prediction outputs
 ```
 
 ## Known Risks And Improvements
 
-- The `invalid` class has fewer examples than `yes` and `no`, so invalid predictions are less reliable.
+- The `invalid` class has fewer examples than `yes` and `no`, but the final invalid-boost run now includes invalid examples in validation.
 - Some downloaded extra images were blurry, too zoomed in, or impossible to read; these should be skipped rather than guessed.
 - More invalid examples should be collected or manually created before relying on invalid classification.
 - A final `diagnose_covid_test.py` script should be added to run detection and classification in one command.

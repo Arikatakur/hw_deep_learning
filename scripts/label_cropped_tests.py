@@ -83,6 +83,11 @@ def parse_args() -> argparse.Namespace:
         help="Padding added around the detected box, as a fraction of box size.",
     )
     parser.add_argument(
+        "--use-full-image",
+        action="store_true",
+        help="Skip YOLO detection and label the full source image. Useful for already-cropped images.",
+    )
+    parser.add_argument(
         "--relabel",
         action="store_true",
         help="Show images even if they already appear in the manifest.",
@@ -189,6 +194,14 @@ def crop_image(image_path: Path, crop_path: Path, box: list[float], padding: flo
     return crop_path
 
 
+def save_full_image(image_path: Path, output_path: Path) -> Path:
+    with Image.open(image_path) as image:
+        image = image.convert("RGB")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        image.save(output_path, quality=95)
+    return output_path
+
+
 class LabelerApp:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
@@ -237,6 +250,15 @@ class LabelerApp:
         while self.index < len(self.images):
             source = self.images[self.index]
             self.index += 1
+            if self.args.use_full_image:
+                crop_name = unique_path(self.args.crop_dir / f"{source.stem}_full.jpg")
+                crop_path = save_full_image(source, crop_name)
+                self.current_source = source
+                self.current_crop = crop_path
+                self.current_confidence = "full image"
+                self.display_crop(crop_path)
+                return
+
             detection = detect_best_box(self.model, source, self.args.conf, self.args.imgsz)
             if detection is None:
                 self.record_action(source, None, None, "no_detection", "")
