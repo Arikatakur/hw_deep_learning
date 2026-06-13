@@ -34,7 +34,7 @@ Phase 2 classifier:
   model type: YOLOv8 classification
   classes: yes, no, invalid
   purpose: classify a cropped rapid test image
-  weights: runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt
+  weights: runs/classify/covid_result_classifier/weights/best.pt
 ```
 
 The detector does not decide positive/negative/invalid. It only crops the useful image region. The classifier makes the final diagnostic prediction from the crop.
@@ -336,7 +336,7 @@ Many of these extra images were blurry, too close, or difficult to read. Those i
 Train YOLOv8 classification:
 
 ```powershell
-yolo classify train model=yolov8n-cls.pt data=classification_dataset epochs=50 imgsz=224 project=runs/classify name=covid_result_classifier_invalid_boost_v2
+yolo classify train model=yolov8n-cls.pt data=classification_dataset epochs=50 imgsz=224 project=runs/classify name=covid_result_classifier
 ```
 
 Training settings from the final run:
@@ -353,17 +353,17 @@ classes: yes, no, invalid
 Final classifier weights:
 
 ```text
-runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt
-runs/classify/covid_result_classifier_invalid_boost_v2/weights/last.pt
+runs/classify/covid_result_classifier/weights/best.pt
+runs/classify/covid_result_classifier/weights/last.pt
 ```
 
 Training outputs:
 
 ```text
-runs/classify/covid_result_classifier_invalid_boost_v2/results.csv
-runs/classify/covid_result_classifier_invalid_boost_v2/results.png
-runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix.png
-runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix_normalized.png
+runs/classify/covid_result_classifier/results.csv
+runs/classify/covid_result_classifier/results.png
+runs/classify/covid_result_classifier/confusion_matrix.png
+runs/classify/covid_result_classifier/confusion_matrix_normalized.png
 ```
 
 Final epoch validation metrics:
@@ -382,21 +382,21 @@ accuracy_top1: 0.92424 = 92.424% at epochs 22, 29, 30, 32, 34, 42, and 50
 
 Classifier training curves:
 
-![Classifier results](runs/classify/covid_result_classifier_invalid_boost_v2/results.png)
+![Classifier results](runs/classify/covid_result_classifier/results.png)
 
 Classifier confusion matrix:
 
-![Classifier confusion matrix](runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix.png)
+![Classifier confusion matrix](runs/classify/covid_result_classifier/confusion_matrix.png)
 
 Normalized classifier confusion matrix:
 
-![Classifier normalized confusion matrix](runs/classify/covid_result_classifier_invalid_boost_v2/confusion_matrix_normalized.png)
+![Classifier normalized confusion matrix](runs/classify/covid_result_classifier/confusion_matrix_normalized.png)
 
 Validation labels and model predictions:
 
-![Classifier validation labels batch 0](runs/classify/covid_result_classifier_invalid_boost_v2/val_batch0_labels.jpg)
+![Classifier validation labels batch 0](runs/classify/covid_result_classifier/val_batch0_labels.jpg)
 
-![Classifier validation predictions batch 0](runs/classify/covid_result_classifier_invalid_boost_v2/val_batch0_pred.jpg)
+![Classifier validation predictions batch 0](runs/classify/covid_result_classifier/val_batch0_pred.jpg)
 
 The final invalid-boost run includes invalid examples in both training and validation. This makes the validation result more meaningful than the earlier run, which had no invalid validation images.
 
@@ -405,7 +405,7 @@ The final invalid-boost run includes invalid examples in both training and valid
 Use validation mode for folder-structured classification data:
 
 ```powershell
-yolo classify val model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt data=classification_dataset
+yolo classify val model=runs/classify/covid_result_classifier/weights/best.pt data=classification_dataset
 ```
 
 This predicts every validation image and compares the prediction against the folder name. The folder name is the ground-truth label.
@@ -415,15 +415,15 @@ This predicts every validation image and compares the prediction against the fol
 `yolo classify predict` expects images directly inside the source folder. For this dataset, run it on each class folder separately:
 
 ```powershell
-yolo classify predict model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt source=classification_dataset/val/yes save=True project=runs/classify name=result_predictions_yes
+yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=classification_dataset/val/yes save=True project=runs/classify name=result_predictions_yes
 ```
 
 ```powershell
-yolo classify predict model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt source=classification_dataset/val/no save=True project=runs/classify name=result_predictions_no
+yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=classification_dataset/val/no save=True project=runs/classify name=result_predictions_no
 ```
 
 ```powershell
-yolo classify predict model=runs/classify/covid_result_classifier_invalid_boost_v2/weights/best.pt source=classification_dataset/val/invalid save=True project=runs/classify name=result_predictions_invalid
+yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=classification_dataset/val/invalid save=True project=runs/classify name=result_predictions_invalid
 ```
 
 ## Full Diagnostic Pipeline

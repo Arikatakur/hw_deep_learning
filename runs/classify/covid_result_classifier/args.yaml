@@ -107,4 +107,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\Saleem\Documents\tmp\plate_work\anpr\runs\classify\runs\classify\covid_result_classifier
+save_dir: C:\Users\Saleem\Documents\GitHubRepositories\collegeRepositories\hw_deep_learning\runs\classify\covid_result_classifier
