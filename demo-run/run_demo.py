@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
+import tempfile
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -55,6 +57,121 @@ def padded_box(xyxy: list[float], width: int, height: int, padding: float) -> tu
         clamp(x2 + pad_x, 1, width),
         clamp(y2 + pad_y, 1, height),
     )
+
+
+def rotate_box_to_original(
+    xyxy: list[float],
+    angle: float,
+    original_width: int,
+    original_height: int,
+) -> list[float]:
+    x1, y1, x2, y2 = xyxy
+    box_points = [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+
+    if angle == 0:
+        mapped = box_points
+    else:
+        theta = math.radians(angle)
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+        center_x = original_width / 2
+        center_y = original_height / 2
+        original_corners = [
+            (0, 0),
+            (original_width, 0),
+            (original_width, original_height),
+            (0, original_height),
+        ]
+        rotated_corners = []
+        for x, y in original_corners:
+            dx = x - center_x
+            dy = y - center_y
+            rotated_corners.append(
+                (
+                    center_x + cos_theta * dx - sin_theta * dy,
+                    center_y + sin_theta * dx + cos_theta * dy,
+                )
+            )
+
+        min_x = min(point[0] for point in rotated_corners)
+        min_y = min(point[1] for point in rotated_corners)
+        mapped = []
+        for x, y in box_points:
+            rotated_x = x + min_x
+            rotated_y = y + min_y
+            dx = rotated_x - center_x
+            dy = rotated_y - center_y
+            mapped.append(
+                (
+                    center_x + cos_theta * dx + sin_theta * dy,
+                    center_y - sin_theta * dx + cos_theta * dy,
+                )
+            )
+
+    xs = [point[0] for point in mapped]
+    ys = [point[1] for point in mapped]
+    return [
+        clamp(min(xs), 0, original_width - 1),
+        clamp(min(ys), 0, original_height - 1),
+        clamp(max(xs), 1, original_width),
+        clamp(max(ys), 1, original_height),
+    ]
+
+
+def detect_best_box(
+    detector: YOLO,
+    image_path: Path,
+    conf: float,
+    imgsz: int,
+    try_rotations: bool,
+) -> tuple[list[float], float, float] | None:
+    rotations = [0]
+    if try_rotations:
+        rotations.extend([-30, -20, -15, -10, 10, 15, 20, 30, 90, 180, 270])
+
+    best: tuple[list[float], float, float] | None = None
+
+    with Image.open(image_path).convert("RGB") as original:
+        original_width, original_height = original.size
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            for angle in rotations:
+                if angle == 0:
+                    candidate_path = image_path
+                else:
+                    rotated = original.rotate(angle, expand=True)
+                    candidate_path = temp_path / f"{image_path.stem}_rot{angle}{image_path.suffix}"
+                    rotated.save(candidate_path)
+
+                result = detector.predict(
+                    source=str(candidate_path),
+                    conf=conf,
+                    imgsz=imgsz,
+                    verbose=False,
+                )[0]
+
+                if result.boxes is None or len(result.boxes) == 0:
+                    continue
+
+                best_box_index = int(result.boxes.conf.argmax())
+                detection_conf = float(result.boxes.conf[best_box_index])
+                xyxy = result.boxes.xyxy[best_box_index].tolist()
+                original_xyxy = rotate_box_to_original(
+                    xyxy,
+                    angle,
+                    original_width,
+                    original_height,
+                )
+
+                if best is None or detection_conf > best[1]:
+                    best = (original_xyxy, detection_conf, angle)
+
+                if angle == 0:
+                    return best
+
+    return best
 
 
 def draw_annotation(
@@ -133,14 +250,15 @@ def run_demo(args: argparse.Namespace) -> int:
     rows: list[dict[str, str]] = []
     print(",".join(fieldnames))
     for image_path in images:
-        detection = detector.predict(
-            source=str(image_path),
-            conf=args.det_conf,
-            imgsz=args.det_imgsz,
-            verbose=False,
-        )[0]
+        detection = detect_best_box(
+            detector,
+            image_path,
+            args.det_conf,
+            args.det_imgsz,
+            args.try_rotations,
+        )
 
-        if detection.boxes is None or len(detection.boxes) == 0:
+        if detection is None:
             label = "no detection"
             annotated_path = unique_output_path(annotated_dir, image_path, "_annotated")
             draw_annotation(image_path, annotated_path, None, label)
@@ -157,9 +275,7 @@ def run_demo(args: argparse.Namespace) -> int:
             print(",".join(row[key] for key in row))
             continue
 
-        best_box_index = int(detection.boxes.conf.argmax())
-        detection_conf = float(detection.boxes.conf[best_box_index])
-        xyxy = detection.boxes.xyxy[best_box_index].tolist()
+        xyxy, detection_conf, rotation_angle = detection
 
         with Image.open(image_path).convert("RGB") as image:
             box = padded_box(xyxy, image.width, image.height, args.crop_padding)
@@ -171,7 +287,7 @@ def run_demo(args: argparse.Namespace) -> int:
         final_result = RESULT_TEXT.get(predicted_class, predicted_class)
         label = (
             f"{predicted_class} ({class_conf:.2f}) | "
-            f"detection {detection_conf:.2f} | {final_result}"
+            f"detection {detection_conf:.2f} | rot {rotation_angle} | {final_result}"
         )
         annotated_path = unique_output_path(annotated_dir, image_path, "_annotated")
         draw_annotation(image_path, annotated_path, box, label)
@@ -219,6 +335,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--det-imgsz", type=int, default=640, help="Detector image size.")
     parser.add_argument("--cls-imgsz", type=int, default=224, help="Classifier image size.")
     parser.add_argument("--crop-padding", type=float, default=0.05, help="Extra padding around detected box.")
+    parser.add_argument(
+        "--no-rotations",
+        action="store_false",
+        dest="try_rotations",
+        help="Disable fallback detection on small angle and right-angle rotations.",
+    )
+    parser.set_defaults(try_rotations=True)
     return parser.parse_args()
 
 

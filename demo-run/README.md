@@ -23,6 +23,8 @@ The script automatically:
 6. writes crops, annotated images, and a CSV summary
 ```
 
+The detector also tries rotated copies of the image during the demo, so mildly tilted photos have a better chance of being detected.
+
 Outputs are written to:
 
 ```text
@@ -55,6 +57,12 @@ Both commands should print `True`.
 python demo-run/run_demo.py --source demo-run/input
 ```
 
+This command runs both models:
+
+```text
+full image -> object detector -> crop -> classifier -> final result
+```
+
 ## Demo With One Image
 
 ```powershell
@@ -67,6 +75,34 @@ If the detector misses an image, rerun with a lower threshold:
 
 ```powershell
 python demo-run/run_demo.py --source demo-run/input --det-conf 0.05
+```
+
+## Disable Rotation Fallback
+
+Rotation fallback is enabled by default. To test only the original orientation:
+
+```powershell
+python demo-run/run_demo.py --source demo-run/input --no-rotations
+```
+
+## Run Only The Classifier
+
+The classifier expects cropped test/result images, not full camera photos. After running the full demo once, use the generated crops:
+
+```powershell
+yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=demo-run/output/crops save=True project=demo-run/output name=classifier_only
+```
+
+Run the classifier on one cropped image:
+
+```powershell
+yolo classify predict model=runs/classify/covid_result_classifier/weights/best.pt source=demo-run/output/crops/IMAGE_NAME_crop.jpg save=True project=demo-run/output name=classifier_only
+```
+
+Check classifier accuracy on the labeled validation set:
+
+```powershell
+yolo classify val model=runs/classify/covid_result_classifier/weights/best.pt data=classification_dataset
 ```
 
 ## Expected Terminal Output
