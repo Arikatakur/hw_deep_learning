@@ -1,5 +1,10 @@
 # COVID-19 Rapid Test Diagnostic Pipeline
 
+## Team Members
+
+- Saleem Yousef, 213523418
+- Noor Shama, ID
+
 This project builds a two-stage deep learning pipeline for reading home COVID-19 rapid antigen test images.
 
 The final workflow is:
